@@ -55,12 +55,13 @@ func main() {
 	var msg amqp.Delivery
 	replies := 0
 	exit := false
+	timeoutTimer := time.NewTimer(TIMEOUT)
 
 	for !exit {
 		if state != utils.Aborted && state != utils.Committed {
 			select {
 			case msg = <-msgs:
-			case <-time.After(TIMEOUT):
+			case <-timeoutTimer.C:
 				log.Println("Timeout occurred, transitioning to Aborted state")
 				state = utils.Aborted
 			}
@@ -83,6 +84,7 @@ func main() {
 				utils.FailOnError(err, "Failed to broadcast Prepare")
 				replies = 0
 				state = utils.Prepared
+				resetTimer(timeoutTimer)
 			}
 		case utils.Prepared:
 			if bytes.Equal(msg.Body, []byte("Ack")) {
@@ -108,4 +110,11 @@ func main() {
 			exit = true
 		}
 	}
+}
+
+func resetTimer(timer *time.Timer) {
+	if !timer.Stop() {
+		<-timer.C
+	}
+	timer.Reset(TIMEOUT)
 }
