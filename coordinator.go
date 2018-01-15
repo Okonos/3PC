@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"log"
 	"time"
 
@@ -45,6 +46,14 @@ func main() {
 	msgs, err := ch.Consume(q.Name, "", true, false, false, false, nil)
 	utils.FailOnError(err, "Failed to register a consumer")
 
+	var noCommit bool
+	flag.BoolVar(&noCommit, "noCommit", false,
+		"If true, the coordinator will crash after sending Prepare")
+	var noPrepare bool
+	flag.BoolVar(&noPrepare, "noPrepare", false,
+		"If true, the coordinator will crash before sending Prepare")
+	flag.Parse()
+
 	// Init - broadcast Commit Request
 	log.Println("Initiating commit - broadcasting Commit Request")
 	err = broadcast(ch, "CommitRequest")
@@ -80,8 +89,18 @@ func main() {
 			if replies == cohortCount {
 				log.Println("All cohorts agreed, broadcasting Prepare",
 					"and transitioning to Prepared state")
+				if noPrepare {
+					log.Println("CRASH!")
+					exit = true
+					break
+				}
 				err := broadcast(ch, "Prepare")
 				utils.FailOnError(err, "Failed to broadcast Prepare")
+				if noCommit {
+					log.Println("CRASH!")
+					exit = true
+					break
+				}
 				replies = 0
 				state = utils.Prepared
 				resetTimer(timeoutTimer)
