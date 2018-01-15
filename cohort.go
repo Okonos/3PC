@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"log"
 	"math/rand"
 	"os"
@@ -46,6 +47,11 @@ func main() {
 
 	msgs, err := ch.Consume(q.Name, "", true, false, false, false, nil)
 	utils.FailOnError(err, "Failed to register a consumer")
+
+	var noAck bool
+	flag.BoolVar(&noAck, "noAck", false,
+		"If true, the cohort will crash before sending Ack")
+	flag.Parse()
 
 	state := utils.NotInitiated
 	log.Println("Awaiting CommitRequest")
@@ -107,6 +113,11 @@ func main() {
 				d := 500 * (rng.Intn(9) + 1)
 				time.Sleep(time.Duration(d) * time.Millisecond)
 				// TODO if crash then dont reply
+				if noAck {
+					log.Println("CRASH!")
+					exit = true
+					break
+				}
 				log.Println("Sending Ack and transitioning to Prepared state")
 				err := replyToCoord(ch, "Ack")
 				utils.FailOnError(err, "Failed to send Ack to coordinator")
