@@ -84,6 +84,9 @@ func main() {
 				state = utils.Aborted
 				break
 			}
+			if !bytes.Equal(msg.Body, []byte("Yes")) {
+				break
+			}
 			replies++
 			log.Println("Cohort agreed, number of cohorts agreeing so far:",
 				replies)
