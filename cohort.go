@@ -139,7 +139,7 @@ func main() {
 			time.Sleep(time.Second)
 			exit = true
 		case utils.Aborted:
-			log.Println("Exiting")
+			log.Println("Transation aborted, exiting")
 			time.Sleep(time.Second)
 			exit = true
 		}
