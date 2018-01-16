@@ -72,6 +72,7 @@ func main() {
 			case msg = <-msgs:
 			case <-timeoutTimer.C:
 				log.Println("Timeout occurred, transitioning to Aborted state")
+				time.Sleep(time.Second)
 				state = utils.Aborted
 			}
 		}

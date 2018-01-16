@@ -71,15 +71,18 @@ func main() {
 			case msg = <-msgs:
 				if bytes.Equal(msg.Body, []byte("Abort")) {
 					log.Println("Received Abort, transitioning to Aborted state")
+					time.Sleep(time.Second)
 					state = utils.Aborted
 				}
 			case <-time.After(TIMEOUT):
 				if state == utils.Prepared {
 					log.Println("Timeout Occurred in Prepared state,",
 						"transitioning to Committed state")
+					time.Sleep(time.Second)
 					state = utils.Committed
 				} else {
 					log.Println("Timeout occurred, transitioning to Aborted state")
+					time.Sleep(time.Second)
 					state = utils.Aborted
 				}
 			}
