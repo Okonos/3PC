@@ -48,21 +48,23 @@ func main() {
 	msgs, err := ch.Consume(q.Name, "", true, false, false, false, nil)
 	utils.FailOnError(err, "Failed to register a consumer")
 
+	var noAgree bool
+	flag.BoolVar(&noAgree, "noAgree", false,
+		"If true, the cohort will not agree to commit")
 	var noAck bool
 	flag.BoolVar(&noAck, "noAck", false,
 		"If true, the cohort will crash before sending Ack")
 	flag.Parse()
 
 	state := utils.NotInitiated
-	log.Println("Awaiting CommitRequest")
 	exit := false
-	agree := true
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Fatalln("Can't get hostname!")
 	}
 	s := rand.NewSource(time.Now().UnixNano() + int64(hostname[len(hostname)-1]))
 	rng := rand.New(s)
+	log.Println("Awaiting CommitRequest")
 
 	for !exit {
 		var msg amqp.Delivery
@@ -99,23 +101,22 @@ func main() {
 			// <0.5; 4.5> seconds
 			d := 500 * (rng.Intn(9) + 1)
 			time.Sleep(time.Duration(d) * time.Millisecond)
-			if agree {
-				log.Println("Replying 'Yes' and transitioning to Waiting state")
-				err := replyToCoord(ch, "Yes")
-				utils.FailOnError(err, "Failed to reply")
-				state = utils.Waiting
-			} else {
+			if noAgree {
 				log.Println("Replying 'No' and transitioning to Aborted state")
 				err := replyToCoord(ch, "No")
 				utils.FailOnError(err, "Failed to reply")
 				state = utils.Aborted
+			} else {
+				log.Println("Replying 'Yes' and transitioning to Waiting state")
+				err := replyToCoord(ch, "Yes")
+				utils.FailOnError(err, "Failed to reply")
+				state = utils.Waiting
 			}
 		case utils.Waiting:
 			if bytes.Equal(msg.Body, []byte("Prepare")) {
 				log.Println("Received Prepare")
 				d := 500 * (rng.Intn(9) + 1)
 				time.Sleep(time.Duration(d) * time.Millisecond)
-				// TODO if crash then dont reply
 				if noAck {
 					log.Println("CRASH!")
 					exit = true
